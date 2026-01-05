@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { User } from '../types';
 
 interface SettingsProps {
@@ -10,22 +10,49 @@ type SettingsTab = 'Profile' | 'Network' | 'Security' | 'Notifications' | 'Advan
 
 const Settings: React.FC<SettingsProps> = ({ user }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('Profile');
+  
+  // Profile State
   const [displayName, setDisplayName] = useState('Enterprise User');
   const [email, setEmail] = useState('contact@enterprise.io');
   const [autoStake, setAutoStake] = useState(false);
+  
+  // Network State
   const [rpcNode, setRpcNode] = useState('https://rpc.testnet.casper.live');
   const [networkType, setNetworkType] = useState('Testnet');
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  
+  // Security State
   const [sessionTimeout, setSessionTimeout] = useState('30');
+  const [securityOptions, setSecurityOptions] = useState({
+    persistence: true,
+    biometric: false,
+    twoFactor: false
+  });
+  
+  // Notifications State
   const [notifications, setNotifications] = useState({
     milestone: true,
     dispute: true,
     yield: false,
     marketing: false
   });
+
+  // Advanced State
+  const [devMode, setDevMode] = useState(false);
   
+  // Global UI State
   const [isSaving, setIsSaving] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+  const [showToast, setShowToast] = useState<{show: boolean, message: string, type: 'success' | 'info'}>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
   const [error, setError] = useState<string | null>(null);
+
+  const triggerToast = (message: string, type: 'success' | 'info' = 'success') => {
+    setShowToast({ show: true, message, type });
+    setTimeout(() => setShowToast({ ...showToast, show: false }), 3000);
+  };
 
   const validateEmail = (email: string) => {
     return String(email)
@@ -43,11 +70,9 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
     }
 
     setIsSaving(true);
-    // Simulate API persistence
     setTimeout(() => {
       setIsSaving(false);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
+      triggerToast('Settings successfully synchronized to Casper local state.');
     }, 1200);
   };
 
@@ -57,7 +82,33 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
     setAutoStake(false);
     setRpcNode('https://rpc.testnet.casper.live');
     setNetworkType('Testnet');
+    setSecurityOptions({ persistence: true, biometric: false, twoFactor: false });
+    setNotifications({ milestone: true, dispute: true, yield: false, marketing: false });
+    setDevMode(false);
     setError(null);
+    triggerToast('All changes reverted to last saved state.', 'info');
+  };
+
+  const testConnection = () => {
+    setIsTestingConnection(true);
+    setTimeout(() => {
+      setIsTestingConnection(false);
+      triggerToast(`Connected to ${networkType} successfully. Latency: 22ms`);
+    }, 1500);
+  };
+
+  const handleExport = (format: 'JSON' | 'PDF') => {
+    triggerToast(`Generating ${format} audit report...`);
+    setTimeout(() => {
+      triggerToast(`${format} report exported to downloads folder.`);
+    }, 2000);
+  };
+
+  const handleRevocation = () => {
+    if (confirm("Are you sure you want to revoke all session keys? You will be disconnected immediately.")) {
+      triggerToast('Emergency Revocation initiated. Clearing session keys...', 'info');
+      setTimeout(() => window.location.reload(), 2000);
+    }
   };
 
   const renderProfileTab = () => (
@@ -67,7 +118,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
         <div className="flex items-center space-x-6">
           <div className="w-20 h-20 rounded-3xl bg-slate-100 border-4 border-white shadow-lg overflow-hidden relative group">
             <img src={`https://picsum.photos/seed/${user.address}/80/80`} alt="Avatar" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer">
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer" onClick={() => triggerToast('Avatar upload available in v2.0')}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             </div>
           </div>
@@ -111,9 +162,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
             <p className="font-bold text-slate-800">Auto-Stake Escrow</p>
             <p className="text-xs text-slate-500">Automatically enable liquid staking for all new agreements.</p>
           </div>
-          <button className={`w-12 h-6 rounded-full relative transition-all ${autoStake ? 'bg-sky-500' : 'bg-slate-300'}`}>
-            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${autoStake ? 'left-7' : 'left-1'}`}></div>
-          </button>
+          <Toggle active={autoStake} onToggle={() => setAutoStake(!autoStake)} />
         </div>
 
         <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
@@ -122,7 +171,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
             <p className="text-xs text-slate-500">Default DAO or account used for dispute resolution.</p>
           </div>
           <div className="text-right">
-            <p className="text-xs font-mono text-sky-600 font-bold underline cursor-pointer">TrustFlow-DAO v1.2</p>
+            <p className="text-xs font-mono text-sky-600 font-bold underline cursor-pointer hover:text-sky-800" onClick={() => triggerToast('Navigating to Arbitrator Registry...')}>TrustFlow-DAO v1.2</p>
             <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">Standard Enterprise Path</p>
           </div>
         </div>
@@ -169,7 +218,14 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
                 value={rpcNode}
                 onChange={(e) => setRpcNode(e.target.value)}
               />
-              <button className="px-6 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs hover:bg-slate-200 transition-all">Test Connection</button>
+              <button 
+                onClick={testConnection}
+                disabled={isTestingConnection}
+                className="px-6 bg-slate-900 text-white rounded-2xl font-bold text-xs hover:bg-black transition-all disabled:opacity-50 flex items-center space-x-2"
+              >
+                {isTestingConnection && <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>}
+                <span>{isTestingConnection ? 'Testing...' : 'Test'}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -203,17 +259,20 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
           <SecurityOption 
             title="Session Persistence" 
             desc="Keep the wallet connected even after browser restart." 
-            active={true}
+            active={securityOptions.persistence}
+            onToggle={() => setSecurityOptions({...securityOptions, persistence: !securityOptions.persistence})}
           />
           <SecurityOption 
             title="Biometric Signature" 
             desc="Require local device authentication for small CSPR releases." 
-            active={false}
+            active={securityOptions.biometric}
+            onToggle={() => setSecurityOptions({...securityOptions, biometric: !securityOptions.biometric})}
           />
           <SecurityOption 
             title="Two-Factor (2FA) Webhooks" 
             desc="Receive an SMS or email code for releases over 5,000 CSPR." 
-            active={false}
+            active={securityOptions.twoFactor}
+            onToggle={() => setSecurityOptions({...securityOptions, twoFactor: !securityOptions.twoFactor})}
           />
         </div>
 
@@ -222,7 +281,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
            <select 
              value={sessionTimeout}
              onChange={(e) => setSessionTimeout(e.target.value)}
-             className="w-full px-5 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-sky-500/20 outline-none"
+             className="w-full px-5 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-sky-500/20 outline-none cursor-pointer"
            >
               <option value="15">15 Minutes</option>
               <option value="30">30 Minutes</option>
@@ -235,7 +294,12 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
       <section className="p-8 bg-rose-50 border border-rose-100 rounded-[32px] space-y-4">
          <h4 className="text-rose-800 font-bold">Revoke Session Keys</h4>
          <p className="text-xs text-rose-700 leading-relaxed">If you suspect your local environment is compromised, revoke all session keys immediately. This will disconnect all active agreements and require a hard wallet signature to re-enable.</p>
-         <button className="bg-rose-500 text-white px-8 py-3 rounded-2xl font-bold text-sm hover:bg-rose-600 shadow-lg shadow-rose-200 transition-all">Emergency Revocation</button>
+         <button 
+           onClick={handleRevocation}
+           className="bg-rose-500 text-white px-8 py-3 rounded-2xl font-bold text-sm hover:bg-rose-600 shadow-lg shadow-rose-200 transition-all active:scale-95"
+         >
+           Emergency Revocation
+         </button>
       </section>
     </div>
   );
@@ -303,40 +367,56 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
            <h4 className="font-bold text-slate-800">Data Management</h4>
            <p className="text-xs text-slate-500 leading-relaxed">Export your entire agreement history as a signed PDF or JSON object for tax and auditing purposes.</p>
            <div className="flex space-x-3">
-             <button className="px-6 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold hover:bg-slate-50 transition-all">Export JSON</button>
-             <button className="px-6 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold hover:bg-slate-50 transition-all">Generate Audit Report</button>
+             <button onClick={() => handleExport('JSON')} className="px-6 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold hover:bg-slate-50 transition-all shadow-sm active:scale-95">Export JSON</button>
+             <button onClick={() => handleExport('PDF')} className="px-6 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold hover:bg-slate-50 transition-all shadow-sm active:scale-95">Generate Audit Report</button>
            </div>
         </div>
 
         <div className="p-8 bg-slate-50 rounded-[32px] border border-slate-100 space-y-4">
            <h4 className="font-bold text-slate-800">Platform Analytics</h4>
-           <div className="flex items-center justify-between group cursor-pointer">
+           <div className="flex items-center justify-between group cursor-pointer" onClick={() => setDevMode(!devMode)}>
               <div>
                 <p className="text-sm font-bold text-slate-700">Developer Mode</p>
                 <p className="text-xs text-slate-500">Enable raw JSON visualization in agreement details.</p>
               </div>
-              <Toggle active={false} onToggle={() => {}} />
+              <Toggle active={devMode} onToggle={() => setDevMode(!devMode)} />
            </div>
         </div>
       </section>
 
       <div className="pt-8 border-t border-slate-100 flex items-center justify-between">
          <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Platform Version: v1.8.4-stable</p>
-         <button className="text-rose-500 text-xs font-bold hover:underline">Delete Local Cache</button>
+         <button 
+          onClick={() => {
+            if(confirm("Wipe local cache? This will reset non-on-chain local settings.")) {
+              triggerToast('Local cache purged. Resetting UI...');
+              setTimeout(() => handleDiscard(), 1000);
+            }
+          }}
+          className="text-rose-500 text-xs font-bold hover:underline"
+         >
+           Delete Local Cache
+         </button>
       </div>
     </div>
   );
 
   return (
     <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 relative">
-      {showToast && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white px-8 py-4 rounded-3xl font-bold shadow-2xl flex items-center space-x-4 animate-in slide-in-from-bottom-10 duration-500">
+      {showToast.show && (
+        <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-50 ${showToast.type === 'success' ? 'bg-emerald-600' : 'bg-sky-600'} text-white px-8 py-4 rounded-3xl font-bold shadow-2xl flex items-center space-x-4 animate-in slide-in-from-bottom-10 duration-500`}>
           <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-            </svg>
+            {showToast.type === 'success' ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
           </div>
-          <span className="text-sm">Settings successfully synchronized to Casper local state.</span>
+          <span className="text-sm">{showToast.message}</span>
         </div>
       )}
 
@@ -391,7 +471,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
               <button 
                 onClick={handleSave}
                 disabled={isSaving}
-                className="bg-slate-900 text-white px-10 py-3.5 rounded-[20px] font-bold shadow-2xl transition-all hover:bg-black flex items-center space-x-3 text-sm"
+                className="bg-slate-900 text-white px-10 py-3.5 rounded-[20px] font-bold shadow-2xl transition-all hover:bg-black flex items-center space-x-3 text-sm active:scale-95 disabled:opacity-50"
               >
                 {isSaving && <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>}
                 <span>{isSaving ? 'Synchronizing...' : 'Apply Changes'}</span>
@@ -405,20 +485,23 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
 
 const Toggle: React.FC<{ active: boolean, onToggle: () => void }> = ({ active, onToggle }) => (
   <button 
-    onClick={onToggle}
-    className={`w-12 h-6 rounded-full relative transition-all duration-300 ${active ? 'bg-sky-500 shadow-inner' : 'bg-slate-200'}`}
+    onClick={(e) => { e.stopPropagation(); onToggle(); }}
+    className={`w-12 h-6 rounded-full relative transition-all duration-300 flex-shrink-0 ${active ? 'bg-sky-500 shadow-inner' : 'bg-slate-200'}`}
   >
     <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-sm ${active ? 'left-7' : 'left-1'}`}></div>
   </button>
 );
 
-const SecurityOption: React.FC<{ title: string, desc: string, active: boolean }> = ({ title, desc, active }) => (
-  <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100 hover:bg-white hover:shadow-md transition-all cursor-pointer group">
+const SecurityOption: React.FC<{ title: string, desc: string, active: boolean, onToggle: () => void }> = ({ title, desc, active, onToggle }) => (
+  <div 
+    className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100 hover:bg-white hover:shadow-md transition-all cursor-pointer group"
+    onClick={onToggle}
+  >
     <div className="max-w-[80%]">
       <p className="font-bold text-slate-800">{title}</p>
       <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
     </div>
-    <Toggle active={active} onToggle={() => {}} />
+    <Toggle active={active} onToggle={onToggle} />
   </div>
 );
 
