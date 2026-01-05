@@ -8,6 +8,37 @@ interface SettingsProps {
 
 type SettingsTab = 'Profile' | 'Network' | 'Security' | 'Notifications' | 'Advanced';
 
+const DEPLOYED_CONTRACTS = [
+  { 
+    name: 'Agreement Factory', 
+    hash: 'hash-AGREEMENT_FACTORY_TESTNET', 
+    description: 'Deploys and registers agreement instances.',
+    version: 'v1.2.0', 
+    status: 'VERIFIED' 
+  },
+  { 
+    name: 'Agreement Instance (Template)', 
+    hash: 'hash-AGREEMENT_INSTANCE_TESTNET', 
+    description: 'Core agreement logic (state machine, escrow, milestones).',
+    version: 'v1.0.0', 
+    status: 'VERIFIED' 
+  },
+  { 
+    name: 'Staking Adapter', 
+    hash: 'hash-STAKING_ADAPTER_TESTNET', 
+    description: 'Optional liquid staking integration for escrowed funds.',
+    version: 'v1.0.4', 
+    status: 'VERIFIED' 
+  },
+  { 
+    name: 'Settlement Adapter', 
+    hash: 'hash-SETTLEMENT_ADAPTER_TESTNET', 
+    description: 'Cross-chain / external settlement interface (mock implementation).',
+    version: 'v1.1.0', 
+    status: 'STAGING' 
+  }
+];
+
 const Settings: React.FC<SettingsProps> = ({ user }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('Profile');
   
@@ -54,6 +85,11 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
     setTimeout(() => setShowToast({ ...showToast, show: false }), 3000);
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    triggerToast('Address copied to clipboard!');
+  };
+
   const validateEmail = (email: string) => {
     return String(email)
       .toLowerCase()
@@ -93,7 +129,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
     setIsTestingConnection(true);
     setTimeout(() => {
       setIsTestingConnection(false);
-      triggerToast(`Connected to ${networkType} successfully. Latency: 22ms`);
+      triggerToast(`Connected to ${networkType} successfully. Latency: 12ms`);
     }, 1500);
   };
 
@@ -183,7 +219,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
       <section className="space-y-6">
         <h3 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4">Casper Node Configuration</h3>
-        <div className="bg-amber-50 border border-amber-100 p-6 rounded-3xl flex items-start space-x-4">
+        <div className="bg-amber-50 border border-amber-100 p-6 rounded-3xl flex items-start space-x-4 shadow-sm">
           <div className="p-2 bg-amber-100 text-amber-700 rounded-xl">
              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
           </div>
@@ -221,7 +257,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
               <button 
                 onClick={testConnection}
                 disabled={isTestingConnection}
-                className="px-6 bg-slate-900 text-white rounded-2xl font-bold text-xs hover:bg-black transition-all disabled:opacity-50 flex items-center space-x-2"
+                className="px-6 bg-slate-900 text-white rounded-2xl font-bold text-xs hover:bg-black transition-all disabled:opacity-50 flex items-center space-x-2 active:scale-95"
               >
                 {isTestingConnection && <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>}
                 <span>{isTestingConnection ? 'Testing...' : 'Test'}</span>
@@ -231,20 +267,39 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
         </div>
       </section>
 
-      <section className="p-6 bg-slate-900 rounded-[32px] text-white">
-        <h4 className="font-bold mb-4 flex items-center space-x-2">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-          <span>Node Telemetry</span>
-        </h4>
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Latency</p>
-            <p className="text-2xl font-black">24ms</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Protocol Version</p>
-            <p className="text-2xl font-black">1.5.2</p>
-          </div>
+      <section className="space-y-6">
+        <h3 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4 text-center md:text-left">Casper Testnet Contract Hashes</h3>
+        <div className="grid grid-cols-1 gap-4">
+          {DEPLOYED_CONTRACTS.map((contract, idx) => (
+            <div key={idx} className="bg-white border border-slate-100 rounded-[28px] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-lg transition-all border-l-4 border-l-sky-500 group">
+               <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 rounded-2xl bg-sky-50 flex items-center justify-center text-sky-600 transition-transform group-hover:scale-110">
+                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                       <p className="font-bold text-slate-800">{contract.name}</p>
+                       <span className="text-[10px] font-black text-slate-400 uppercase bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{contract.version}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">{contract.description}</p>
+                    <p className="text-[11px] font-mono text-slate-400 mt-2 truncate max-w-[200px] md:max-w-none bg-slate-50 p-1.5 rounded-lg border border-slate-100">{contract.hash}</p>
+                  </div>
+               </div>
+               <div className="flex items-center space-x-3 self-end md:self-auto">
+                  <span className={`flex items-center space-x-1 px-3 py-1 rounded-full text-[10px] font-black ${contract.status === 'VERIFIED' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
+                     <div className={`w-1.5 h-1.5 rounded-full ${contract.status === 'VERIFIED' ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+                     <span>{contract.status}</span>
+                  </span>
+                  <button 
+                    onClick={() => copyToClipboard(contract.hash)}
+                    className="p-2.5 bg-slate-100 text-slate-500 rounded-xl hover:bg-sky-100 hover:text-sky-600 transition-all active:scale-90"
+                    title="Copy Contract Hash"
+                  >
+                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                  </button>
+               </div>
+            </div>
+          ))}
         </div>
       </section>
     </div>
@@ -281,7 +336,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
            <select 
              value={sessionTimeout}
              onChange={(e) => setSessionTimeout(e.target.value)}
-             className="w-full px-5 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-sky-500/20 outline-none cursor-pointer"
+             className="w-full px-5 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-sky-500/20 outline-none cursor-pointer font-bold text-slate-700"
            >
               <option value="15">15 Minutes</option>
               <option value="30">30 Minutes</option>
@@ -292,13 +347,13 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
       </section>
 
       <section className="p-8 bg-rose-50 border border-rose-100 rounded-[32px] space-y-4">
-         <h4 className="text-rose-800 font-bold">Revoke Session Keys</h4>
-         <p className="text-xs text-rose-700 leading-relaxed">If you suspect your local environment is compromised, revoke all session keys immediately. This will disconnect all active agreements and require a hard wallet signature to re-enable.</p>
+         <h4 className="text-rose-800 font-bold">Emergency Operations</h4>
+         <p className="text-xs text-rose-700 leading-relaxed font-medium">If you suspect your local environment is compromised, revoke all session keys immediately. This will disconnect all active agreements and require a hard wallet signature to re-enable.</p>
          <button 
            onClick={handleRevocation}
            className="bg-rose-500 text-white px-8 py-3 rounded-2xl font-bold text-sm hover:bg-rose-600 shadow-lg shadow-rose-200 transition-all active:scale-95"
          >
-           Emergency Revocation
+           Revoke All Session Keys
          </button>
       </section>
     </div>
@@ -372,6 +427,28 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
            </div>
         </div>
 
+        <div className="p-8 bg-slate-900 rounded-[32px] border border-slate-800 space-y-4 text-white">
+           <h4 className="font-bold text-sky-400">System Technical Stack</h4>
+           <div className="grid grid-cols-2 gap-4 text-[11px]">
+             <div>
+               <p className="text-slate-500 uppercase font-black tracking-widest">Core Language</p>
+               <p className="font-bold">Rust (WASM)</p>
+             </div>
+             <div>
+               <p className="text-slate-500 uppercase font-black tracking-widest">Execution Engine</p>
+               <p className="font-bold">Casper VM (Odra Framework)</p>
+             </div>
+             <div>
+               <p className="text-slate-500 uppercase font-black tracking-widest">Network</p>
+               <p className="font-bold">Casper Testnet (PoS)</p>
+             </div>
+             <div>
+               <p className="text-slate-500 uppercase font-black tracking-widest">AI Oracle</p>
+               <p className="font-bold">Gemini-3 Flash Preview</p>
+             </div>
+           </div>
+        </div>
+
         <div className="p-8 bg-slate-50 rounded-[32px] border border-slate-100 space-y-4">
            <h4 className="font-bold text-slate-800">Platform Analytics</h4>
            <div className="flex items-center justify-between group cursor-pointer" onClick={() => setDevMode(!devMode)}>
@@ -438,7 +515,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
               <div className="bg-sky-50 p-6 rounded-[28px] border border-sky-100">
                  <p className="text-[10px] font-black text-sky-600 uppercase tracking-widest mb-2">Connected Tier</p>
                  <p className="text-sm font-bold text-sky-900">Enterprise Partner</p>
-                 <p className="text-[10px] text-sky-700 mt-1">Verified on Casper Mainnet</p>
+                 <p className="text-[10px] text-sky-700 mt-1 font-medium">Verified on Casper Mainnet</p>
               </div>
            </div>
         </div>
